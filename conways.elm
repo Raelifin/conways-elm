@@ -4,6 +4,8 @@ import Html exposing (Html, button, div, text, h2, img)
 import Html.Events exposing (onClick)
 -- import Json.Decode as Decode
 import Random
+import Matrix exposing (Location)
+import Matrix.Random
 
 
 main : Program Never Model Msg
@@ -13,29 +15,67 @@ main =
 
 -- MODEL
 
+type alias Board = Matrix.Matrix Bool
+
 type alias Model =
-  { board : List (List Bool)
+  { board : Board
   }
 
 init : (Model, Cmd Msg)
 init =
-  (Model (List.repeat 20 (List.repeat 100 False)), Cmd.none)
-
+  (Model (Matrix.matrix 20 100 (\loc -> False)), Cmd.none)
 
 -- UPDATE
 
+bit : Maybe Bool -> Int
+bit b =
+  if Maybe.withDefault False b then 1 else 0
+
+neighborhood : Location -> List Location
+neighborhood loc =
+    [ Matrix.loc (Matrix.row loc) (Matrix.col loc)
+    , Matrix.loc (1 + Matrix.row loc) (Matrix.col loc)
+    , Matrix.loc (-1 + Matrix.row loc) (Matrix.col loc)
+    , Matrix.loc (Matrix.row loc) (1 + Matrix.col loc)
+    , Matrix.loc (1 + Matrix.row loc) (1 + Matrix.col loc)
+    , Matrix.loc (-1 + Matrix.row loc) (1 + Matrix.col loc)
+    , Matrix.loc (Matrix.row loc) (-1 + Matrix.col loc)
+    , Matrix.loc (1 + Matrix.row loc) (-1 + Matrix.col loc)
+    , Matrix.loc (-1 + Matrix.row loc) (-1 + Matrix.col loc)
+    ]
+
+neighborCount : Location -> Board -> Int
+neighborCount loc board =
+  List.sum <| List.map (\n -> bit <| Matrix.get n board) (neighborhood loc)
+
+step : Board -> Board
+step board =
+  let
+    lives loc val =
+      List.member (neighborCount loc board) [3,3+(bit <| Just val)]
+
+  in
+    Matrix.mapWithLocation lives board
+
 type Msg
   = Reset
-  | SetBoard Bool
+  | SetBoard Board
+  | Step
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Reset ->
-      (model, Random.generate SetBoard Random.bool)
+      let
+        randomMatrix = Matrix.Random.matrix (Random.int 100 100) (Random.int 20 20) (Random.bool)
+      in
+        (model, Random.generate SetBoard randomMatrix)
 
-    SetBoard newVal ->
-      ({model | board = (List.repeat 20 (List.repeat 100 newVal))}, Cmd.none)
+    SetBoard newBoard ->
+      ({model | board = newBoard}, Cmd.none)
+
+    Step ->
+      ({model | board = step model.board}, Cmd.none)
 
 -- SUBSCRIPTIONS
 
@@ -50,13 +90,17 @@ view : Model -> Html Msg
 view model =
   let
     boardstring boardline =
-      String.join "" (List.map (\b -> if b then "#" else ".") boardline)
+      String.join "" (List.map (\b -> if b then "X" else "_") boardline)
 
     boardstrings board =
       List.map (\line -> div [] [text (boardstring line)]) board
 
   in
-    div [] ( boardstrings model.board ++ [ button [ onClick Reset ] [ text "New Board" ] ] )
+    div [] ( boardstrings (Matrix.toList model.board)
+    ++ [ button [ onClick Reset ] [ text "New Board" ]
+       , button [ onClick Step ] [text "Step"]
+       ]
+    )
 
 
 -- HTTP

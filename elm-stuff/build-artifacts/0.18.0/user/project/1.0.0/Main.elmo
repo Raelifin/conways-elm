@@ -1,43 +1,157 @@
 var _user$project$Main$subscriptions = function (model) {
 	return _elm_lang$core$Platform_Sub$none;
 };
+var _user$project$Main$neighborhood = function (loc) {
+	return {
+		ctor: '::',
+		_0: A2(
+			_chendrix$elm_matrix$Matrix$loc,
+			_chendrix$elm_matrix$Matrix$row(loc),
+			_chendrix$elm_matrix$Matrix$col(loc)),
+		_1: {
+			ctor: '::',
+			_0: A2(
+				_chendrix$elm_matrix$Matrix$loc,
+				1 + _chendrix$elm_matrix$Matrix$row(loc),
+				_chendrix$elm_matrix$Matrix$col(loc)),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_chendrix$elm_matrix$Matrix$loc,
+					-1 + _chendrix$elm_matrix$Matrix$row(loc),
+					_chendrix$elm_matrix$Matrix$col(loc)),
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_chendrix$elm_matrix$Matrix$loc,
+						_chendrix$elm_matrix$Matrix$row(loc),
+						1 + _chendrix$elm_matrix$Matrix$col(loc)),
+					_1: {
+						ctor: '::',
+						_0: A2(
+							_chendrix$elm_matrix$Matrix$loc,
+							1 + _chendrix$elm_matrix$Matrix$row(loc),
+							1 + _chendrix$elm_matrix$Matrix$col(loc)),
+						_1: {
+							ctor: '::',
+							_0: A2(
+								_chendrix$elm_matrix$Matrix$loc,
+								-1 + _chendrix$elm_matrix$Matrix$row(loc),
+								1 + _chendrix$elm_matrix$Matrix$col(loc)),
+							_1: {
+								ctor: '::',
+								_0: A2(
+									_chendrix$elm_matrix$Matrix$loc,
+									_chendrix$elm_matrix$Matrix$row(loc),
+									-1 + _chendrix$elm_matrix$Matrix$col(loc)),
+								_1: {
+									ctor: '::',
+									_0: A2(
+										_chendrix$elm_matrix$Matrix$loc,
+										1 + _chendrix$elm_matrix$Matrix$row(loc),
+										-1 + _chendrix$elm_matrix$Matrix$col(loc)),
+									_1: {
+										ctor: '::',
+										_0: A2(
+											_chendrix$elm_matrix$Matrix$loc,
+											-1 + _chendrix$elm_matrix$Matrix$row(loc),
+											-1 + _chendrix$elm_matrix$Matrix$col(loc)),
+										_1: {ctor: '[]'}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	};
+};
+var _user$project$Main$bit = function (b) {
+	return A2(_elm_lang$core$Maybe$withDefault, false, b) ? 1 : 0;
+};
+var _user$project$Main$neighborCount = F2(
+	function (loc, board) {
+		return _elm_lang$core$List$sum(
+			A2(
+				_elm_lang$core$List$map,
+				function (n) {
+					return _user$project$Main$bit(
+						A2(_chendrix$elm_matrix$Matrix$get, n, board));
+				},
+				_user$project$Main$neighborhood(loc)));
+	});
+var _user$project$Main$step = function (board) {
+	var lives = F2(
+		function (loc, val) {
+			return A2(
+				_elm_lang$core$List$member,
+				A2(_user$project$Main$neighborCount, loc, board),
+				{
+					ctor: '::',
+					_0: 3,
+					_1: {
+						ctor: '::',
+						_0: 3 + _user$project$Main$bit(
+							_elm_lang$core$Maybe$Just(val)),
+						_1: {ctor: '[]'}
+					}
+				});
+		});
+	return A2(_chendrix$elm_matrix$Matrix$mapWithLocation, lives, board);
+};
 var _user$project$Main$Model = function (a) {
 	return {board: a};
 };
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
 	_0: _user$project$Main$Model(
-		A2(
-			_elm_lang$core$List$repeat,
+		A3(
+			_chendrix$elm_matrix$Matrix$matrix,
 			20,
-			A2(_elm_lang$core$List$repeat, 100, false))),
+			100,
+			function (loc) {
+				return false;
+			})),
 	_1: _elm_lang$core$Platform_Cmd$none
 };
+var _user$project$Main$Step = {ctor: 'Step'};
 var _user$project$Main$SetBoard = function (a) {
 	return {ctor: 'SetBoard', _0: a};
 };
 var _user$project$Main$update = F2(
 	function (msg, model) {
 		var _p0 = msg;
-		if (_p0.ctor === 'Reset') {
-			return {
-				ctor: '_Tuple2',
-				_0: model,
-				_1: A2(_elm_lang$core$Random$generate, _user$project$Main$SetBoard, _elm_lang$core$Random$bool)
-			};
-		} else {
-			return {
-				ctor: '_Tuple2',
-				_0: _elm_lang$core$Native_Utils.update(
-					model,
-					{
-						board: A2(
-							_elm_lang$core$List$repeat,
-							20,
-							A2(_elm_lang$core$List$repeat, 100, _p0._0))
-					}),
-				_1: _elm_lang$core$Platform_Cmd$none
-			};
+		switch (_p0.ctor) {
+			case 'Reset':
+				var randomMatrix = A3(
+					_chendrix$elm_matrix$Matrix_Random$matrix,
+					A2(_elm_lang$core$Random$int, 100, 100),
+					A2(_elm_lang$core$Random$int, 20, 20),
+					_elm_lang$core$Random$bool);
+				return {
+					ctor: '_Tuple2',
+					_0: model,
+					_1: A2(_elm_lang$core$Random$generate, _user$project$Main$SetBoard, randomMatrix)
+				};
+			case 'SetBoard':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{board: _p0._0}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							board: _user$project$Main$step(model.board)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
 		}
 	});
 var _user$project$Main$Reset = {ctor: 'Reset'};
@@ -49,7 +163,7 @@ var _user$project$Main$view = function (model) {
 			A2(
 				_elm_lang$core$List$map,
 				function (b) {
-					return b ? '#' : '.';
+					return b ? 'X' : '_';
 				},
 				boardline));
 	};
@@ -74,7 +188,8 @@ var _user$project$Main$view = function (model) {
 		{ctor: '[]'},
 		A2(
 			_elm_lang$core$Basics_ops['++'],
-			boardstrings(model.board),
+			boardstrings(
+				_chendrix$elm_matrix$Matrix$toList(model.board)),
 			{
 				ctor: '::',
 				_0: A2(
@@ -89,7 +204,22 @@ var _user$project$Main$view = function (model) {
 						_0: _elm_lang$html$Html$text('New Board'),
 						_1: {ctor: '[]'}
 					}),
-				_1: {ctor: '[]'}
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_elm_lang$html$Html$button,
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$Step),
+							_1: {ctor: '[]'}
+						},
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html$text('Step'),
+							_1: {ctor: '[]'}
+						}),
+					_1: {ctor: '[]'}
+				}
 			}));
 };
 var _user$project$Main$main = _elm_lang$html$Html$program(

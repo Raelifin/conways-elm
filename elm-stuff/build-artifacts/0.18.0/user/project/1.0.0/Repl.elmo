@@ -1,2 +1,82 @@
+var _user$project$Repl$x = {
+	out: {ctor: '[]'},
+	n: 0
+};
 var _user$project$Repl$t_s_o_l = {ctor: '_Tuple0'};
-var _user$project$Repl$d_e_l_t_r_o_n_3_0_3_0 = A2(_elm_lang$core$List$repeat, 3, false);
+var _user$project$Repl$line = {
+	ctor: '::',
+	_0: true,
+	_1: {
+		ctor: '::',
+		_0: false,
+		_1: {
+			ctor: '::',
+			_0: false,
+			_1: {
+				ctor: '::',
+				_0: true,
+				_1: {
+					ctor: '::',
+					_0: false,
+					_1: {
+						ctor: '::',
+						_0: true,
+						_1: {ctor: '[]'}
+					}
+				}
+			}
+		}
+	}
+};
+var _user$project$Repl$eat = F2(
+	function (_p0, bit) {
+		var _p1 = _p0;
+		var _p2 = _p1.n;
+		return {
+			out: {ctor: '::', _0: _p2, _1: _p1.out},
+			n: _p2 + (bit ? 1 : 0)
+		};
+	});
+var _user$project$Repl$c = A2(
+	_elm_lang$core$Basics_ops['++'],
+	_user$project$Repl$line,
+	{
+		ctor: '::',
+		_0: false,
+		_1: {
+			ctor: '::',
+			_0: false,
+			_1: {ctor: '[]'}
+		}
+	});
+var _user$project$Repl$bit = function (b) {
+	return b ? 1 : 0;
+};
+var _user$project$Repl$d_e_l_t_r_o_n_3_0_3_0 = A2(_elm_lang$core$List$map, _user$project$Repl$bit, _user$project$Repl$line);
+var _user$project$Repl$b = A2(
+	_elm_lang$core$Basics_ops['++'],
+	{
+		ctor: '::',
+		_0: false,
+		_1: {ctor: '[]'}
+	},
+	A2(
+		_elm_lang$core$Basics_ops['++'],
+		_user$project$Repl$line,
+		{
+			ctor: '::',
+			_0: false,
+			_1: {ctor: '[]'}
+		}));
+var _user$project$Repl$a = A2(
+	_elm_lang$core$Basics_ops['++'],
+	{
+		ctor: '::',
+		_0: false,
+		_1: {
+			ctor: '::',
+			_0: false,
+			_1: {ctor: '[]'}
+		}
+	},
+	_user$project$Repl$line);
