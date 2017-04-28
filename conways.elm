@@ -1,11 +1,12 @@
-import Html exposing (Html, button, div, text, h2, img)
--- import Http
--- import Html.Attributes exposing (src)
+import Html exposing (Html, button, div, text)
 import Html.Events exposing (onClick)
--- import Json.Decode as Decode
 import Random
 import Matrix exposing (Location)
 import Matrix.Random
+import Time exposing (Time)
+import Color
+import Element exposing (toHtml)
+import Collage exposing (collage)
 
 
 main : Program Never Model Msg
@@ -15,21 +16,37 @@ main =
 
 -- MODEL
 
-type alias Board = Matrix.Matrix Bool
+boardWidth : number
+boardWidth = 50
+boardHeight : number
+boardHeight = 50
+
+type alias Cell = Bool
+
+defaultCell : Cell
+defaultCell = False
+
+type alias Board = Matrix.Matrix Cell
+
+type alias CellRendition = {color : Color.Color, size : Float}
 
 type alias Model =
   { board : Board
+  , rendition : (Matrix.Matrix CellRendition)
   }
+
+randomMatrix : Random.Generator (Matrix.Matrix Float)
+randomMatrix = Matrix.Random.matrix (Random.int boardHeight boardWidth) (Random.int boardHeight boardWidth) (Random.float 0 1)
 
 init : (Model, Cmd Msg)
 init =
-  (Model (Matrix.matrix 20 100 (\loc -> False)), Cmd.none)
+  (Model (Matrix.fromList []) (Matrix.fromList []), Random.generate SetBoard randomMatrix)
 
 -- UPDATE
 
-bit : Maybe Bool -> Int
-bit b =
-  if Maybe.withDefault False b then 1 else 0
+bit : Maybe Cell -> number
+bit c =
+  if (Maybe.withDefault defaultCell c) then 1 else 0
 
 neighborhood : Location -> List Location
 neighborhood loc =
@@ -44,44 +61,65 @@ neighborhood loc =
     , Matrix.loc (-1 + Matrix.row loc) (-1 + Matrix.col loc)
     ]
 
-neighborCount : Location -> Board -> Int
+neighborCount : Location -> Board -> number
 neighborCount loc board =
   List.sum <| List.map (\n -> bit <| Matrix.get n board) (neighborhood loc)
 
-step : Board -> Board
-step board =
+boardStep : Board -> Board
+boardStep board =
   let
     lives loc val =
       List.member (neighborCount loc board) [3,3+(bit <| Just val)]
-
   in
     Matrix.mapWithLocation lives board
 
+renditionStep : Model -> Model
+renditionStep model =
+  let
+    cap x =
+      max 0 (min 1 x)
+
+    updateCellRendition loc rend =
+      {rend | size = cap (rend.size + ((Matrix.get loc model.board |> bit)*2 - 1)/10)}
+  in
+    {model | rendition = Matrix.mapWithLocation updateCellRendition model.rendition}
+
 type Msg
   = Reset
-  | SetBoard Board
-  | Step
+  | SetBoard (Matrix.Matrix Float)
+  | NextTurn
+  | AnimateTick
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Reset ->
+      (model, Random.generate SetBoard randomMatrix)
+
+    SetBoard randomMatrix ->
       let
-        randomMatrix = Matrix.Random.matrix (Random.int 100 100) (Random.int 20 20) (Random.bool)
+        randomMatrixToBoard m =
+          Matrix.map (\f -> f > 0.7) m
+
+        randomMatrixToRendition m =
+          Matrix.map (\f -> {color = Color.hsl (f*2*pi) 0.5 0.8, size = f}) m
       in
-        (model, Random.generate SetBoard randomMatrix)
+        ({board = randomMatrixToBoard randomMatrix, rendition = randomMatrixToRendition randomMatrix}, Cmd.none)
 
-    SetBoard newBoard ->
-      ({model | board = newBoard}, Cmd.none)
+    NextTurn ->
+      ({model | board = boardStep model.board}, Cmd.none)
 
-    Step ->
-      ({model | board = step model.board}, Cmd.none)
+    AnimateTick ->
+      (renditionStep model, Cmd.none)
 
 -- SUBSCRIPTIONS
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+  Sub.batch
+    [ Time.every (Time.second/10) (\t -> NextTurn)
+    , Time.every (Time.second/20) (\t -> AnimateTick)
+    ]
 
 
 -- VIEW
@@ -89,32 +127,20 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
   let
-    boardstring boardline =
-      String.join "" (List.map (\b -> if b then "X" else "_") boardline)
+    makeSquare cell =
+      Collage.filled (cell.color) <| Collage.square (cell.size*10)
 
-    boardstrings board =
-      List.map (\line -> div [] [text (boardstring line)]) board
+    toSquares list =
+      List.map (\(x,y,cell) -> Collage.move ((x+0.5 - boardWidth/2)*10, (y+0.5 - boardHeight/2)*10) <| makeSquare cell) list
+
+    wrap loc val =
+      (toFloat <| Matrix.col loc, toFloat <| Matrix.row loc, val)
+
+    renderBoard board =
+      collage (10*boardWidth) (10*boardHeight) (toSquares <| Matrix.flatten <| Matrix.mapWithLocation wrap board)
 
   in
-    div [] ( boardstrings (Matrix.toList model.board)
-    ++ [ button [ onClick Reset ] [ text "New Board" ]
-       , button [ onClick Step ] [text "Step"]
-       ]
-    )
-
-
--- HTTP
-{--
-getRandomGif : String -> Cmd Msg
-getRandomGif topic =
-  let
-    url =
-      "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=" ++ topic
-  in
-    Http.send NewGif (Http.get url decodeGifUrl)
-
-
-decodeGifUrl : Decode.Decoder String
-decodeGifUrl =
-  Decode.at ["data", "image_url"] Decode.string
---}
+    div []
+      [ toHtml <| renderBoard model.rendition
+      , button [ onClick Reset ] [ text "New Board" ]
+      ]

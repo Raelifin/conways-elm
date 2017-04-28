@@ -1,6 +1,3 @@
-var _user$project$Main$subscriptions = function (model) {
-	return _elm_lang$core$Platform_Sub$none;
-};
 var _user$project$Main$neighborhood = function (loc) {
 	return {
 		ctor: '::',
@@ -67,8 +64,9 @@ var _user$project$Main$neighborhood = function (loc) {
 		}
 	};
 };
-var _user$project$Main$bit = function (b) {
-	return A2(_elm_lang$core$Maybe$withDefault, false, b) ? 1 : 0;
+var _user$project$Main$defaultCell = false;
+var _user$project$Main$bit = function (c) {
+	return A2(_elm_lang$core$Maybe$withDefault, _user$project$Main$defaultCell, c) ? 1 : 0;
 };
 var _user$project$Main$neighborCount = F2(
 	function (loc, board) {
@@ -81,7 +79,7 @@ var _user$project$Main$neighborCount = F2(
 				},
 				_user$project$Main$neighborhood(loc)));
 	});
-var _user$project$Main$step = function (board) {
+var _user$project$Main$boardStep = function (board) {
 	var lives = F2(
 		function (loc, val) {
 			return A2(
@@ -100,97 +98,186 @@ var _user$project$Main$step = function (board) {
 		});
 	return A2(_chendrix$elm_matrix$Matrix$mapWithLocation, lives, board);
 };
-var _user$project$Main$Model = function (a) {
-	return {board: a};
+var _user$project$Main$renditionStep = function (model) {
+	var cap = function (x) {
+		return A2(
+			_elm_lang$core$Basics$max,
+			0,
+			A2(_elm_lang$core$Basics$min, 1, x));
+	};
+	var updateCellRendition = F2(
+		function (loc, rend) {
+			return _elm_lang$core$Native_Utils.update(
+				rend,
+				{
+					size: cap(
+						rend.size + (((_user$project$Main$bit(
+							A2(_chendrix$elm_matrix$Matrix$get, loc, model.board)) * 2) - 1) / 10))
+				});
+		});
+	return _elm_lang$core$Native_Utils.update(
+		model,
+		{
+			rendition: A2(_chendrix$elm_matrix$Matrix$mapWithLocation, updateCellRendition, model.rendition)
+		});
+};
+var _user$project$Main$boardHeight = 50;
+var _user$project$Main$boardWidth = 50;
+var _user$project$Main$randomMatrix = A3(
+	_chendrix$elm_matrix$Matrix_Random$matrix,
+	A2(_elm_lang$core$Random$int, _user$project$Main$boardHeight, _user$project$Main$boardWidth),
+	A2(_elm_lang$core$Random$int, _user$project$Main$boardHeight, _user$project$Main$boardWidth),
+	A2(_elm_lang$core$Random$float, 0, 1));
+var _user$project$Main$CellRendition = F2(
+	function (a, b) {
+		return {color: a, size: b};
+	});
+var _user$project$Main$Model = F2(
+	function (a, b) {
+		return {board: a, rendition: b};
+	});
+var _user$project$Main$AnimateTick = {ctor: 'AnimateTick'};
+var _user$project$Main$NextTurn = {ctor: 'NextTurn'};
+var _user$project$Main$subscriptions = function (model) {
+	return _elm_lang$core$Platform_Sub$batch(
+		{
+			ctor: '::',
+			_0: A2(
+				_elm_lang$core$Time$every,
+				_elm_lang$core$Time$second / 10,
+				function (t) {
+					return _user$project$Main$NextTurn;
+				}),
+			_1: {
+				ctor: '::',
+				_0: A2(
+					_elm_lang$core$Time$every,
+					_elm_lang$core$Time$second / 20,
+					function (t) {
+						return _user$project$Main$AnimateTick;
+					}),
+				_1: {ctor: '[]'}
+			}
+		});
+};
+var _user$project$Main$SetBoard = function (a) {
+	return {ctor: 'SetBoard', _0: a};
 };
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
-	_0: _user$project$Main$Model(
-		A3(
-			_chendrix$elm_matrix$Matrix$matrix,
-			20,
-			100,
-			function (loc) {
-				return false;
-			})),
-	_1: _elm_lang$core$Platform_Cmd$none
-};
-var _user$project$Main$Step = {ctor: 'Step'};
-var _user$project$Main$SetBoard = function (a) {
-	return {ctor: 'SetBoard', _0: a};
+	_0: A2(
+		_user$project$Main$Model,
+		_chendrix$elm_matrix$Matrix$fromList(
+			{ctor: '[]'}),
+		_chendrix$elm_matrix$Matrix$fromList(
+			{ctor: '[]'})),
+	_1: A2(_elm_lang$core$Random$generate, _user$project$Main$SetBoard, _user$project$Main$randomMatrix)
 };
 var _user$project$Main$update = F2(
 	function (msg, model) {
 		var _p0 = msg;
 		switch (_p0.ctor) {
 			case 'Reset':
-				var randomMatrix = A3(
-					_chendrix$elm_matrix$Matrix_Random$matrix,
-					A2(_elm_lang$core$Random$int, 100, 100),
-					A2(_elm_lang$core$Random$int, 20, 20),
-					_elm_lang$core$Random$bool);
 				return {
 					ctor: '_Tuple2',
 					_0: model,
-					_1: A2(_elm_lang$core$Random$generate, _user$project$Main$SetBoard, randomMatrix)
+					_1: A2(_elm_lang$core$Random$generate, _user$project$Main$SetBoard, _user$project$Main$randomMatrix)
 				};
 			case 'SetBoard':
+				var _p1 = _p0._0;
+				var randomMatrixToRendition = function (m) {
+					return A2(
+						_chendrix$elm_matrix$Matrix$map,
+						function (f) {
+							return {
+								color: A3(_elm_lang$core$Color$hsl, (f * 2) * _elm_lang$core$Basics$pi, 0.5, 0.8),
+								size: f
+							};
+						},
+						m);
+				};
+				var randomMatrixToBoard = function (m) {
+					return A2(
+						_chendrix$elm_matrix$Matrix$map,
+						function (f) {
+							return _elm_lang$core$Native_Utils.cmp(f, 0.7) > 0;
+						},
+						m);
+				};
 				return {
 					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{board: _p0._0}),
+					_0: {
+						board: randomMatrixToBoard(_p1),
+						rendition: randomMatrixToRendition(_p1)
+					},
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
-			default:
+			case 'NextTurn':
 				return {
 					ctor: '_Tuple2',
 					_0: _elm_lang$core$Native_Utils.update(
 						model,
 						{
-							board: _user$project$Main$step(model.board)
+							board: _user$project$Main$boardStep(model.board)
 						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				return {
+					ctor: '_Tuple2',
+					_0: _user$project$Main$renditionStep(model),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 		}
 	});
 var _user$project$Main$Reset = {ctor: 'Reset'};
 var _user$project$Main$view = function (model) {
-	var boardstring = function (boardline) {
+	var wrap = F2(
+		function (loc, val) {
+			return {
+				ctor: '_Tuple3',
+				_0: _elm_lang$core$Basics$toFloat(
+					_chendrix$elm_matrix$Matrix$col(loc)),
+				_1: _elm_lang$core$Basics$toFloat(
+					_chendrix$elm_matrix$Matrix$row(loc)),
+				_2: val
+			};
+		});
+	var makeSquare = function (cell) {
 		return A2(
-			_elm_lang$core$String$join,
-			'',
-			A2(
-				_elm_lang$core$List$map,
-				function (b) {
-					return b ? 'X' : '_';
-				},
-				boardline));
+			_evancz$elm_graphics$Collage$filled,
+			cell.color,
+			_evancz$elm_graphics$Collage$square(cell.size * 10));
 	};
-	var boardstrings = function (board) {
+	var toSquares = function (list) {
 		return A2(
 			_elm_lang$core$List$map,
-			function (line) {
+			function (_p2) {
+				var _p3 = _p2;
 				return A2(
-					_elm_lang$html$Html$div,
-					{ctor: '[]'},
-					{
-						ctor: '::',
-						_0: _elm_lang$html$Html$text(
-							boardstring(line)),
-						_1: {ctor: '[]'}
-					});
+					_evancz$elm_graphics$Collage$move,
+					{ctor: '_Tuple2', _0: ((_p3._0 + 0.5) - (_user$project$Main$boardWidth / 2)) * 10, _1: ((_p3._1 + 0.5) - (_user$project$Main$boardHeight / 2)) * 10},
+					makeSquare(_p3._2));
 			},
-			board);
+			list);
+	};
+	var renderBoard = function (board) {
+		return A3(
+			_evancz$elm_graphics$Collage$collage,
+			10 * _user$project$Main$boardWidth,
+			10 * _user$project$Main$boardHeight,
+			toSquares(
+				_chendrix$elm_matrix$Matrix$flatten(
+					A2(_chendrix$elm_matrix$Matrix$mapWithLocation, wrap, board))));
 	};
 	return A2(
 		_elm_lang$html$Html$div,
 		{ctor: '[]'},
-		A2(
-			_elm_lang$core$Basics_ops['++'],
-			boardstrings(
-				_chendrix$elm_matrix$Matrix$toList(model.board)),
-			{
+		{
+			ctor: '::',
+			_0: _evancz$elm_graphics$Element$toHtml(
+				renderBoard(model.rendition)),
+			_1: {
 				ctor: '::',
 				_0: A2(
 					_elm_lang$html$Html$button,
@@ -204,23 +291,9 @@ var _user$project$Main$view = function (model) {
 						_0: _elm_lang$html$Html$text('New Board'),
 						_1: {ctor: '[]'}
 					}),
-				_1: {
-					ctor: '::',
-					_0: A2(
-						_elm_lang$html$Html$button,
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$Step),
-							_1: {ctor: '[]'}
-						},
-						{
-							ctor: '::',
-							_0: _elm_lang$html$Html$text('Step'),
-							_1: {ctor: '[]'}
-						}),
-					_1: {ctor: '[]'}
-				}
-			}));
+				_1: {ctor: '[]'}
+			}
+		});
 };
 var _user$project$Main$main = _elm_lang$html$Html$program(
 	{init: _user$project$Main$init, view: _user$project$Main$view, subscriptions: _user$project$Main$subscriptions, update: _user$project$Main$update})();
